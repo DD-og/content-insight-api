@@ -12,6 +12,7 @@ client = Groq(
 # JSON Schema definition
 SCHEMA = {
     "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Brand Insights, Article Generation, and Media Insights Schema",
     "type": "object",
     "properties": {
         "basicInfo": {
@@ -31,14 +32,16 @@ SCHEMA = {
                     "enum": [
                         "Technology", "Healthcare", "Finance", "Retail",
                         "Education", "Entertainment", "Other"
-                    ]
+                    ],
+                    "description": "The industry the brand belongs to."
                 },
                 "productOrServiceType": {
                     "type": "string",
                     "enum": [
                         "SaaS", "PaaS", "IaaS", "Consumer Goods",
                         "B2B Services", "B2C Services", "Other"
-                    ]
+                    ],
+                    "description": "The type of product or service the brand offers."
                 },
                 "targetAudience": {
                     "type": "string",
@@ -46,7 +49,8 @@ SCHEMA = {
                         "Small Businesses", "Enterprise Companies",
                         "Freelancers", "Students", "Tech-Savvy Professionals",
                         "General Consumers", "Other"
-                    ]
+                    ],
+                    "description": "The primary audience for the brand."
                 }
             },
             "required": ["brandName", "industryType", "productOrServiceType", "targetAudience"]
@@ -56,14 +60,17 @@ SCHEMA = {
             "properties": {
                 "features": {
                     "type": "array",
-                    "items": {"type": "string"}
+                    "items": {"type": "string"},
+                    "description": "A list of key features of the product or service."
                 },
                 "USPs": {
                     "type": "array",
-                    "items": {"type": "string"}
+                    "items": {"type": "string"},
+                    "description": "Unique Selling Points of the product or service."
                 },
                 "primaryProblemSolved": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "The main problem the product or service aims to solve."
                 }
             },
             "required": ["features", "USPs", "primaryProblemSolved"]
@@ -76,25 +83,53 @@ SCHEMA = {
                     "enum": [
                         "Blog", "News Article", "Press Release",
                         "Case Study", "Whitepaper", "Other"
-                    ]
+                    ],
+                    "description": "The type of article to generate."
                 },
                 "articleLength": {
                     "type": "integer",
+                    "description": "The desired length of the article in words.",
                     "minimum": 100
                 },
                 "keywordsToEmphasize": {
                     "type": "array",
-                    "items": {"type": "string"}
+                    "items": {"type": "string"},
+                    "description": "Keywords to highlight in the article."
                 },
                 "callToAction": {
                     "type": "string",
+                    "description": "Optional call-to-action text.",
                     "default": None
                 }
             },
             "required": ["articleType", "articleLength", "keywordsToEmphasize"]
+        },
+        "mediaInsights": {
+            "type": "object",
+            "properties": {
+                "primaryAudienceDemographics": {
+                    "type": "string",
+                    "description": "Demographics of the primary audience."
+                },
+                "painPointsAddressed": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Pain points the product or service addresses."
+                },
+                "competitors": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of competitors in the market."
+                },
+                "marketPosition": {
+                    "type": "string",
+                    "description": "How the brand positions itself in comparison to competitors."
+                }
+            },
+            "required": ["primaryAudienceDemographics", "painPointsAddressed", "competitors", "marketPosition"]
         }
     },
-    "required": ["basicInfo", "productServiceDetails", "articleDetails"]
+    "required": ["basicInfo", "productServiceDetails", "articleDetails", "mediaInsights"]
 }
 
 def validate_input(data: Dict[str, Any]) -> None:
@@ -106,61 +141,84 @@ def validate_input(data: Dict[str, Any]) -> None:
     except ValidationError as e:
         raise ValueError(f"Input validation failed: {str(e)}")
 
-def generate_article(input_data: Dict[str, Any]) -> Dict[str, Dict[str, str]]:
-    """
-    Generate an article using GROQ API based on the provided input data
-    """
-    tagline = input_data['basicInfo'].get('tagline', '')
-    call_to_action = input_data['articleDetails'].get('callToAction', '')
-    
-    prompt = f"""
-    Generate a detailed {input_data['articleDetails']['articleType']} about {input_data['basicInfo']['brandName']}.
-    
-    Brand Information:
-    - Industry: {input_data['basicInfo']['industryType']}
-    - Product/Service Type: {input_data['basicInfo']['productOrServiceType']}
-    - Target Audience: {input_data['basicInfo']['targetAudience']}
-    {f'- Tagline: {tagline}' if tagline else ''}
-    
-    Key Features:
-    {', '.join(input_data['productServiceDetails']['features'])}
-    
-    USPs:
-    {', '.join(input_data['productServiceDetails']['USPs'])}
-    
-    Primary Problem Solved:
-    {input_data['productServiceDetails']['primaryProblemSolved']}
-    
-    Keywords to Emphasize:
-    {', '.join(input_data['articleDetails']['keywordsToEmphasize'])}
-    
-    Required length: {input_data['articleDetails']['articleLength']} words
-    {f'Call to Action: {call_to_action}' if call_to_action else ''}
-    
-    Please generate a well-structured article that incorporates all these elements while maintaining a professional tone.
-    The article should be engaging, informative, and highlight the unique value proposition of the product/service.
-    Make sure to naturally incorporate the keywords throughout the text.
-    """
+def send_to_content_insight(input_data: Dict[str, Any]) -> Dict[str, Any]:
+    # This function is not implemented in the provided code
+    # It should send the input data to a content insight API and return the analysis
+    return {}
 
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        model="llama-3.3-70b-versatile",
-        temperature=0.7,
-        max_tokens=2000,
-        top_p=1,
-        stream=False
-    )
-
-    return {
-        "articleGeneration": {
-            "englishArticle": chat_completion.choices[0].message.content
+def generate_article(input_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Generate an article using both GROQ and content insight APIs based on the provided input data
+    """
+    try:
+        # Validate input data against schema
+        validate_input(input_data)
+        
+        # First, get content insight analysis
+        content_insight = send_to_content_insight(input_data)
+        
+        # Prepare prompt for GROQ using content insight and media insights
+        prompt = f"""
+        Generate an article with the following details:
+        
+        Brand: {input_data['basicInfo']['brandName']}
+        Industry: {input_data['basicInfo']['industryType']}
+        Target Audience: {input_data['basicInfo']['targetAudience']}
+        
+        Key Features:
+        {', '.join(input_data['productServiceDetails']['features'])}
+        
+        USPs:
+        {', '.join(input_data['productServiceDetails']['USPs'])}
+        
+        Primary Problem Solved:
+        {input_data['productServiceDetails']['primaryProblemSolved']}
+        
+        Media Insights:
+        - Primary Audience Demographics: {input_data['mediaInsights']['primaryAudienceDemographics']}
+        - Pain Points Addressed: {', '.join(input_data['mediaInsights']['painPointsAddressed'])}
+        - Market Position: {input_data['mediaInsights']['marketPosition']}
+        - Competitors: {', '.join(input_data['mediaInsights']['competitors'])}
+        
+        Content Insight Analysis:
+        {content_insight.get('analysis', 'No additional insights available')}
+        
+        Article Type: {input_data['articleDetails']['articleType']}
+        Required Length: {input_data['articleDetails']['articleLength']} words
+        Keywords to Emphasize: {', '.join(input_data['articleDetails']['keywordsToEmphasize'])}
+        """
+        
+        # Generate article using GROQ
+        chat_completion = client.chat.completions.create(
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a professional content writer who specializes in creating engaging and informative articles."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            model="mixtral-8x7b-32768",
+            temperature=0.7,
+            max_tokens=4000,
+            top_p=1,
+            stream=False
+        )
+        
+        # Extract the generated article
+        generated_article = chat_completion.choices[0].message.content
+        
+        return {
+            "article": generated_article,
+            "content_insight": content_insight
         }
-    }
+        
+    except ValidationError as e:
+        raise Exception(f"Input validation error: {str(e)}")
+    except Exception as e:
+        raise Exception(f"Error generating article: {str(e)}")
 
 def main():
     # Example input data
@@ -199,6 +257,20 @@ def main():
                 "digital transformation"
             ],
             "callToAction": "Schedule a demo today to see how TechCorp can transform your business operations."
+        },
+        "mediaInsights": {
+            "primaryAudienceDemographics": "Large enterprises with 1000+ employees",
+            "painPointsAddressed": [
+                "Inefficient workflows",
+                "Lack of data-driven insights",
+                "Insufficient security measures"
+            ],
+            "competitors": [
+                "Microsoft",
+                "Amazon Web Services",
+                "Google Cloud"
+            ],
+            "marketPosition": "Leader in enterprise automation solutions"
         }
     }
 
